@@ -1,5 +1,3 @@
-# detector/views.py
-
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
@@ -93,7 +91,7 @@ def visualizar_analise(request, feedback_id):
     classificacao = semaforo['label']
     cor = semaforo['cor']
 
-    # Extract motivo and precaucao from analise_ia if available
+    
     motivo = "Informação não disponível."
     precaucao = "Informação não disponível."
     try:

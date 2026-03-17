@@ -23,21 +23,21 @@ if OLLAMA_API_KEY:
         host="https://ollama.com",
         headers={'Authorization': f'Bearer {OLLAMA_API_KEY}'}
     ))
-    print(f"✅ Ollama Key 1 configurada: {MODELO_OLLAMA}")
+    print(f"Ollama Key 1 configurada: {MODELO_OLLAMA}")
 
 if OLLAMA_API_KEY2:
     ollama_clients.append(Client(
         host="https://ollama.com",
         headers={'Authorization': f'Bearer {OLLAMA_API_KEY2}'}
     ))
-    print(f"✅ Ollama Key 2 configurada: {MODELO_OLLAMA}")
+    print(f"Ollama Key 2 configurada: {MODELO_OLLAMA}")
 
 if not ollama_clients:
-    print("⚠️ Nenhuma chave Ollama configurada.")
+    print("Nenhuma chave Ollama configurada.")
 
 # Gemini fallback
 genai.configure(api_key=settings.GEMINI_API_KEY)
-print("✅ Gemini configurado como fallback.")
+print("Gemini configurado como fallback.")
 
 try:
     embedding_function = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5")
@@ -49,7 +49,7 @@ try:
 
     # Auto-populate se ChromaDB estiver vazio
     if vector_store._collection.count() == 0:
-        print("⚠️ ChromaDB vazio. Populando com 100 linhas de cada dataset...")
+        print("ChromaDB vazio. Populando com 100 linhas de cada dataset...")
         try:
             import pandas as pd
             datasets = ["database/email_dataset.csv", "database/sms_dataset.csv"]
@@ -69,17 +69,17 @@ try:
 
             if all_docs:
                 vector_store.add_documents(all_docs)
-                print(f"✅ ChromaDB populado com {len(all_docs)} documentos.")
+                print(f"ChromaDB populado com {len(all_docs)} documentos.")
             else:
-                print("⚠️ Nenhum dataset encontrado para popular o ChromaDB.")
+                print("Nenhum dataset encontrado para popular o ChromaDB.")
         except Exception as e:
-            print(f"⚠️ Erro ao popular ChromaDB: {e}")
+            print(f"Erro ao popular ChromaDB: {e}")
     else:
-        print(f"✅ RAG carregado ({vector_store._collection.count()} docs).")
+        print(f"RAG carregado ({vector_store._collection.count()} docs).")
 
 except Exception as e:
     RAG_ATIVO = False
-    print(f"⚠️ RAG indisponível: {e}")
+    print(f"RAG indisponível: {e}")
 
 
 def buscar_exemplos_similares(texto_usuario):
@@ -212,7 +212,7 @@ def analisar_com_IA(texto: str, debug: bool = False) -> dict:
     # Normalizar para busca de duplicatas
     texto_normalizado = _normalizar_texto(texto)
 
-    # Verificar match no Django DB (usando texto normalizado)
+    # Verificar match no Django DB 
     feedbacks_existentes = Feedback.objects.all()
     feedback_existente = None
     for fb in feedbacks_existentes:
@@ -246,7 +246,7 @@ def analisar_com_IA(texto: str, debug: bool = False) -> dict:
             resultado["exemplo_exato"] = exemplo_exato
         return resultado
 
-    # Verificar match exato no ChromaDB
+    # Verificar vetor exato no ChromaDB
     label_chromadb = buscar_exemplo_igual(texto)
     if label_chromadb:
         risk_level = _mapear_label_para_risk_level(label_chromadb)
@@ -292,7 +292,7 @@ def analisar_com_IA(texto: str, debug: bool = False) -> dict:
     "{texto}"
     """
     
-    # Chamar IA (Ollama com load balancing → Gemini fallback)
+    # Chamar IA 
     resposta_ia = None
     modelo_usado = None
     
@@ -317,16 +317,16 @@ def analisar_com_IA(texto: str, debug: bool = False) -> dict:
                 print(f"⚠️ Ollama Key {i+1} falhou: {e}")
                 continue
     
-    # Fallback Gemini
+    
     if resposta_ia is None:
         try:
             model = genai.GenerativeModel('gemini-2.5-flash')
             response = model.generate_content(PROMPT_SISTEMA + "\n" + prompt_usuario)
             resposta_ia = response.text
             modelo_usado = "Gemini 2.5 Flash (fallback)"
-            print(f"✅ {modelo_usado}")
+            print(f"{modelo_usado}")
         except Exception as e:
-            print(f"❌ Todas as APIs falharam: {e}")
+            print(f"Todas as APIs falharam: {e}")
             return {
                 "risk_level": "INDETERMINADO",
                 "analysis_details": [f"Todas as APIs falharam: {e}"],
@@ -345,7 +345,7 @@ def analisar_com_IA(texto: str, debug: bool = False) -> dict:
         if "risk_level" not in resultado_json or "motivo" not in resultado_json:
              raise ValueError("Resposta da IA sem chaves esperadas.")
 
-        # Adicionar campos extras para Swagger
+    
         if debug:
             resultado_json["debug"] = {
                 "modelo_usado": modelo_usado,
@@ -385,7 +385,7 @@ def adicionar_ao_chromadb(texto: str, rotulo: str) -> bool:
     global vector_store, RAG_ATIVO
     
     if not RAG_ATIVO:
-        print("⚠️ RAG indisponível para treinamento.")
+        print("RAG indisponível para treinamento.")
         return False
         
     try:
@@ -394,8 +394,8 @@ def adicionar_ao_chromadb(texto: str, rotulo: str) -> bool:
             metadata={"label": rotulo}
         )
         vector_store.add_documents([novo_documento])
-        print(f"✅ ChromaDB: adicionado com rótulo '{rotulo}'")
+        print(f"ChromaDB: adicionado com rótulo '{rotulo}'")
         return True
     except Exception as e:
-        print(f"❌ ChromaDB erro: {e}")
+        print(f"ChromaDB erro: {e}")
         return False

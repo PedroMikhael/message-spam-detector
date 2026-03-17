@@ -7,11 +7,11 @@ import os
 from datetime import datetime
 import csv 
 
-API_URL = "https://chatbot-spam.duckdns.org/api/spam/"
+API_URL = ""
 TEMPO_DE_ESPERA_SEGUNDOS = 7.0 
 ARQUIVO_RELATORIO_FINAL = 'evaluation_metrics_report.txt' 
 
-# Defina os arquivos CSV, colunas e limites de linhas
+# Definir os arquivos CSV, colunas e limites de linhas
 DATASETS_PARA_TESTAR = [
     {
         "nome": "SMS Dataset",

@@ -26,7 +26,7 @@ SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 CHECK_INTERVAL_SECONDS = 10 
 
 # ─── Configuração das contas ────────────────────────────────────────
-# Cada conta é um dict com:
+# Cada conta é um dicionario com:
 #   - name: nome para exibir nos logs
 #   - token_file: caminho do arquivo token local
 #   - token_env: nome da variável de ambiente com o token JSON
@@ -57,11 +57,11 @@ def extrair_conteudo_original(email_body):
     if FORWARD_SEPARATOR not in email_body:
         return email_body.strip()
     
-    # Pegar o último bloco de forwarding (mensagem original)
+    
     blocos = email_body.split(FORWARD_SEPARATOR)
     ultimo_bloco = blocos[-1].strip()
     
-    # Remover headers do forwarding (De:, Date:, Subject:, To:)
+    
     linhas = ultimo_bloco.split('\n')
     conteudo_limpo = []
     headers_a_pular = ('de:', 'from:', 'date:', 'subject:', 'to:', 'cc:', 'bcc:')
@@ -70,20 +70,20 @@ def extrair_conteudo_original(email_body):
     for linha in linhas:
         linha_stripped = linha.strip().lower()
         
-        # Pular linhas de header no início do bloco
+        
         if not header_encontrado and not linha_stripped:
-            continue  # Pular linhas vazias antes do conteúdo
+            continue  
         
         if any(linha_stripped.startswith(h) for h in headers_a_pular):
             header_encontrado = True
             continue
         
-        # Após os headers, pular a próxima linha vazia (separador)
+        
         if header_encontrado and not linha_stripped:
             header_encontrado = False
             continue
         
-        # Conteúdo real
+        
         header_encontrado = False
         conteudo_limpo.append(linha)
     
@@ -94,9 +94,9 @@ def is_mensagem_vazia(texto):
     """Verifica se o conteúdo extraído é vazio ou sem substância."""
     if not texto:
         return True
-    # Remover espaços, tabs, newlines
+    
     limpo = texto.strip()
-    if len(limpo) < 5:  # Menos de 5 caracteres = vazio
+    if len(limpo) < 5:  
         return True
     return False
 
@@ -110,7 +110,6 @@ def authenticate(account):
 
     print(f"[{account_name}] Iniciando autenticação...")
 
-    # 1) Tentar carregar token da variável de ambiente
     token_json_env = os.environ.get(token_env)
     if token_json_env:
         try:
@@ -120,17 +119,14 @@ def authenticate(account):
         except Exception as e:
             print(f"[{account_name}] Erro ao carregar token de env: {e}")
 
-    # 2) Fallback: tentar carregar do arquivo local
     if not creds and os.path.exists(token_file):
         creds = Credentials.from_authorized_user_file(token_file, SCOPES)
         print(f"[{account_name}] Token carregado de arquivo ({token_file}).")
 
-    # 3) Renovar ou solicitar autorização
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             print(f"[{account_name}] Renovando token de acesso...")
             creds.refresh(Request())
-            # Salvar no arquivo local se não veio de env
             if not token_json_env:
                 with open(token_file, "w") as f:
                     f.write(creds.to_json())
@@ -146,7 +142,7 @@ def authenticate(account):
             with open(token_file, "w") as f:
                 f.write(creds.to_json())
 
-    print(f"[{account_name}] ✅ Autenticação bem-sucedida.")
+    print(f"[{account_name}]  Autenticação bem-sucedida.")
     return build("gmail", "v1", credentials=creds)
 
 
@@ -193,7 +189,7 @@ def check_and_process_emails(service, account_name="Bot"):
 
             
             if is_mensagem_vazia(conteudo_limpo):
-                print(f"    ⚠️ Mensagem vazia detectada — respondendo sem IA.")
+                print(f"     Mensagem vazia detectada — respondendo sem IA.")
                 
                 nova_analise = Feedback.objects.create(
                     mensagem_original=conteudo_limpo,
@@ -256,7 +252,7 @@ def send_reply(service, to, subject, motivo, precaucao, feedback_id, risk_level=
     link_correto = f"{base_url}/feedback/{feedback_id}/correto/"
     link_incorreto = f"{base_url}/feedback/{feedback_id}/incorreto/"
 
-    # Mapear risk_level para imagem, cor e label em português
+    
     semaforo_map = {
         "SAFE": {"img": "semaforoVerde.png", "cor": "#28a745", "label": "Segura"},
         "SUSPICIOUS": {"img": "semaforoAmarelo.png", "cor": "#ffc107", "label": "Suspeita"},
@@ -420,13 +416,13 @@ def get_enabled_accounts():
     """Retorna lista das contas habilitadas (com token disponível)."""
     enabled = []
     for account in ACCOUNTS:
-        # Verificar se a conta está explicitamente desabilitada
+        
         enabled_flag = os.environ.get(account["enabled_env"], "true").strip().lower()
         if enabled_flag in ("false", "0", "no", "off"):
             print(f"[{account['name']}] ⏭️  Conta desabilitada via {account['enabled_env']}.")
             continue
 
-        # Verificar se existe token (env ou arquivo)
+        
         has_token_env = bool(os.environ.get(account["token_env"]))
         has_token_file = os.path.exists(account["token_file"])
 
@@ -436,7 +432,7 @@ def get_enabled_accounts():
 
         enabled.append(account)
 
-    # Compatibilidade: se nenhuma conta nova foi encontrada, tentar TOKEN_JSON legado
+    
     if not enabled:
         legacy_env = os.environ.get("TOKEN_JSON")
         legacy_file = os.path.exists("token.json")
@@ -461,40 +457,39 @@ if __name__ == "__main__":
     enabled_accounts = get_enabled_accounts()
 
     if not enabled_accounts:
-        print("❌ Nenhuma conta configurada. Configure TOKEN_JSON_UECE e/ou TOKEN_JSON_PESSOAL.")
+        print(" Nenhuma conta configurada. Configure TOKEN_JSON_UECE e/ou TOKEN_JSON_PESSOAL.")
         sys.exit(1)
 
-    print(f"📧 {len(enabled_accounts)} conta(s) habilitada(s): {', '.join(a['name'] for a in enabled_accounts)}\n")
+    print(f" {len(enabled_accounts)} conta(s) habilitada(s): {', '.join(a['name'] for a in enabled_accounts)}\n")
 
-    # Autenticar todas as contas primeiro
+    
     services = []
     for account in enabled_accounts:
         try:
             service = authenticate(account)
             services.append((service, account["name"]))
         except Exception as e:
-            print(f"[{account['name']}] ❌ Falha na autenticação: {e}")
+            print(f"[{account['name']}]  Falha na autenticação: {e}")
 
     if not services:
-        print("❌ Nenhuma conta autenticada com sucesso.")
+        print(" Nenhuma conta autenticada com sucesso.")
         sys.exit(1)
 
-    # Se apenas uma conta, rodar direto (sem thread extra)
+    
     if len(services) == 1:
         service, name = services[0]
         run_account_loop(service, name)
     else:
-        # Rodar cada conta em sua própria thread
         threads = []
         for service, name in services:
             t = threading.Thread(target=run_account_loop, args=(service, name), daemon=True)
             t.start()
             threads.append(t)
-            print(f"[{name}] 🧵 Thread iniciada.")
+            print(f"[{name}]  Thread iniciada.")
 
-        # Manter o processo principal vivo
+       
         try:
             while True:
                 time.sleep(60)
         except KeyboardInterrupt:
-            print("\n🛑 Bot encerrado pelo usuário.")
+            print("\n Bot encerrado pelo usuário.")

@@ -26,7 +26,7 @@ def authorize(token_file):
     with open(token_file, "w") as f:
         f.write(creds.to_json())
 
-    print(f"\n✅ Autorização concluída! Token salvo em '{token_file}'.")
+    print(f"\n Autorização concluída! Token salvo em '{token_file}'.")
 
 
 def main():
@@ -39,14 +39,14 @@ def main():
 
     if conta:
         if conta not in CONTA_MAP:
-            print(f"❌ Conta '{conta}' não reconhecida. Use: {', '.join(CONTA_MAP.keys())}")
+            print(f"Conta '{conta}' não reconhecida. Use: {', '.join(CONTA_MAP.keys())}")
             sys.exit(1)
         token_file = CONTA_MAP[conta]
     else:
-        # Menu interativo
+        
         print("Qual conta deseja autorizar?\n")
         for i, (nome, arquivo) in enumerate(CONTA_MAP.items(), 1):
-            exists = "✅ (token existe)" if os.path.exists(arquivo) else "❌ (sem token)"
+            exists = "(token existe)" if os.path.exists(arquivo) else "(sem token)"
             print(f"  {i}. {nome.upper()} → {arquivo} {exists}")
 
         print()
@@ -60,10 +60,10 @@ def main():
             if 0 <= idx < len(keys):
                 token_file = CONTA_MAP[keys[idx]]
             else:
-                print("❌ Opção inválida.")
+                print("Opção inválida.")
                 sys.exit(1)
         else:
-            print("❌ Opção inválida.")
+            print("Opção inválida.")
             sys.exit(1)
 
     authorize(token_file)
