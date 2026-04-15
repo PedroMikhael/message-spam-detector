@@ -4,8 +4,25 @@
 echo "===== Application Startup at $(date) ====="
 
 # Rodar migrações do banco de dados
+echo "Gerando migrações..."
+python manage.py makemigrations --noinput
 echo "Aplicando migrações do banco de dados..."
 python manage.py migrate --noinput
+
+# Backfill hash_conteudo para registros existentes (sem hash)
+echo "Atualizando hashes de registros existentes..."
+python -c "
+import django, os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'spamapi.settings')
+django.setup()
+from detector.models import Feedback
+updated = 0
+for fb in Feedback.objects.filter(hash_conteudo=''):
+    fb.hash_conteudo = Feedback.gerar_hash(fb.mensagem_original)
+    fb.save(update_fields=['hash_conteudo'])
+    updated += 1
+print(f'Hashes atualizados: {updated} registros')
+"
 
 # Criar superusuário automaticamente (se variáveis estiverem configuradas)
 if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ] && [ -n "$DJANGO_SUPERUSER_EMAIL" ]; then

@@ -13,14 +13,15 @@ app_port: 7860
 
 **Intelligent protection against spam, phishing and digital threats.**
 
-[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://python.org)
-[![Django](https://img.shields.io/badge/Django-5.0+-092E20?logo=django&logoColor=white)](https://djangoproject.com)
-[![Gemini](https://img.shields.io/badge/Google_Gemini-AI-4285F4?logo=google&logoColor=white)](https://ai.google.dev)
-[![Ollama](https://img.shields.io/badge/Ollama-AI-4285F4?logo=ollama&logoColor=white)](https://ollama.com)
-[![LangChain](https://img.shields.io/badge/LangChain-AI-4285F4?logo=langchain&logoColor=white)](https://langchain.com)
-[![Hugging Face](https://img.shields.io/badge/Hugging_Face-Deployed-FFD21E?logo=huggingface&logoColor=black)](https://pedromikhael-verificai.hf.space/swagger/)
-[![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker&logoColor=white)](https://docker.com)
-[![License](https://img.shields.io/badge/License-Academic-lightgrey)]()
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
+![Google Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)
+![Ollama](https://img.shields.io/badge/Ollama-000000?style=for-the-badge&logo=ollama&logoColor=white)
+![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
+![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6F61?style=for-the-badge)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Hugging Face](https://img.shields.io/badge/Hugging_Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)
 
 <br>
 

@@ -37,6 +37,10 @@ scikit-learn
 pandas
 numpy
 
+# HTML & Image Processing
+beautifulsoup4
+Pillow
+
 # Utilities
 python-decouple
 python-dotenv

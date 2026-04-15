@@ -7,6 +7,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import re
 import json
+from bs4 import BeautifulSoup
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -101,6 +102,83 @@ def is_mensagem_vazia(texto):
     return False
 
 
+def extrair_partes_email(payload):
+    """Percorre recursivamente a árvore MIME e coleta text/plain, text/html e imagens."""
+    partes = {"text/plain": [], "text/html": [], "images": []}
+    
+    def _percorrer(part):
+        mime = part.get("mimeType", "")
+        if mime.startswith("multipart/"):
+            for sub in part.get("parts", []):
+                _percorrer(sub)
+        elif mime == "text/plain":
+            data = part.get("body", {}).get("data", "")
+            if data:
+                partes["text/plain"].append(data)
+        elif mime == "text/html":
+            data = part.get("body", {}).get("data", "")
+            if data:
+                partes["text/html"].append(data)
+        elif mime.startswith("image/"):
+            # Imagens inline — extrair via attachmentId ou data direta
+            body = part.get("body", {})
+            if body.get("data"):
+                partes["images"].append({
+                    "mime": mime,
+                    "data": body["data"],
+                    "filename": part.get("filename", "image"),
+                })
+            elif body.get("attachmentId"):
+                partes["images"].append({
+                    "mime": mime,
+                    "attachmentId": body["attachmentId"],
+                    "filename": part.get("filename", "image"),
+                })
+    
+    _percorrer(payload)
+    return partes
+
+
+def obter_texto_email(partes_email):
+    """Obtém o texto do email priorizando text/plain, com fallback para text/html."""
+    # Prioridade 1: text/plain
+    if partes_email["text/plain"]:
+        textos = []
+        for data in partes_email["text/plain"]:
+            textos.append(base64.urlsafe_b64decode(data).decode("utf-8", errors='ignore'))
+        return "\n".join(textos)
+    
+    # Prioridade 2: text/html → converter para texto via BeautifulSoup
+    if partes_email["text/html"]:
+        textos = []
+        for data in partes_email["text/html"]:
+            html = base64.urlsafe_b64decode(data).decode("utf-8", errors='ignore')
+            soup = BeautifulSoup(html, "html.parser")
+            textos.append(soup.get_text(separator="\n", strip=True))
+        return "\n".join(textos)
+    
+    return ""
+
+
+def obter_imagens_base64(service, user_id, message_id, partes_email):
+    """Baixa imagens do email e retorna lista de strings base64."""
+    imagens_b64 = []
+    for img_info in partes_email["images"]:
+        try:
+            if "data" in img_info:
+                # Imagem inline com dados diretos
+                imagens_b64.append(img_info["data"])
+            elif "attachmentId" in img_info:
+                # Imagem como attachment — baixar via API
+                att = service.users().messages().attachments().get(
+                    userId=user_id, messageId=message_id, id=img_info["attachmentId"]
+                ).execute()
+                imagens_b64.append(att["data"])
+        except Exception as e:
+            print(f"    Erro ao baixar imagem '{img_info.get('filename', '?')}': {e}")
+    return imagens_b64
+
+
 def authenticate(account):
     """Autentica com a API do Gmail para uma conta específica."""
     creds = None
@@ -172,24 +250,26 @@ def check_and_process_emails(service, account_name="Bot"):
             print(f"   ID: {message_info['id']}")
             print(f"{'='*60}")
 
-            if "data" in msg["payload"]["body"]:
-                email_body_encoded = msg["payload"]["body"]["data"]
-            else:
-                parts = msg["payload"].get("parts", [])
-                part = next(iter(p for p in parts if p["mimeType"] == "text/plain"), None)
-                email_body_encoded = part["body"]["data"] if part else ""
-
-            email_body = base64.urlsafe_b64decode(email_body_encoded).decode("utf-8", errors='ignore')
+            # Parser MIME recursivo — extrai text/plain, text/html e imagens
+            partes_email = extrair_partes_email(msg["payload"])
             
+            # Obter texto (text/plain → text/html fallback via BeautifulSoup)
+            email_body = obter_texto_email(partes_email)
             
             conteudo_limpo = extrair_conteudo_original(email_body)
+            
+            # Obter imagens inline do email
+            imagens_b64 = obter_imagens_base64(service, "me", message_info["id"], partes_email)
+            
+            if imagens_b64:
+                print(f"   {len(imagens_b64)} imagem(ns) encontrada(s) no email")
             
             preview = conteudo_limpo[:200].replace('\n', ' ')
             print(f"   Preview (limpo): {preview}...")
 
             
-            if is_mensagem_vazia(conteudo_limpo):
-                print(f"     Mensagem vazia detectada — respondendo sem IA.")
+            if is_mensagem_vazia(conteudo_limpo) and not imagens_b64:
+                print(f"     Mensagem vazia detectada (sem texto e sem imagens) — respondendo sem IA.")
                 
                 nova_analise = Feedback.objects.create(
                     mensagem_original=conteudo_limpo,
@@ -206,7 +286,9 @@ def check_and_process_emails(service, account_name="Bot"):
 
             
             print(f"\n Analisando com IA...")
-            resultado_analise = analisar_com_IA(conteudo_limpo)
+            if imagens_b64:
+                print(f"   [Multimodal] Enviando texto + {len(imagens_b64)} imagem(ns) para análise")
+            resultado_analise = analisar_com_IA(conteudo_limpo, imagens=imagens_b64 if imagens_b64 else None)
             
             risk_level = resultado_analise.get('risk_level', 'INDETERMINADO')
             motivo = resultado_analise.get('motivo', 'Análise indisponível.')

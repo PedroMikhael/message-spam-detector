@@ -2,6 +2,8 @@ import os
 import requests
 import json
 import re
+import base64
+import io
 from django.conf import settings
 from decouple import config
 from ollama import Client
@@ -10,6 +12,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 import random
 import google.generativeai as genai
+from PIL import Image
 
 # Ollama Cloud clients (load balancing)
 OLLAMA_API_KEY = config("OLLAMA_API_KEY", default="")
@@ -163,6 +166,7 @@ PROMPT_SISTEMA = """
         - Domain impersonation (official-looking messages with unrelated domains = MALICIOUS)
         - Social engineering (urgency, greed, authority, scarcity tactics)
         - Historical context from RAG examples
+        - **If images are attached:** Analyze them for logos impersonating real organizations, QR codes with suspicious URLs, text rendered as images to bypass filters, and any visual social engineering tactics.
 
     2. **CLASSIFICATION:** Assign ONE of: `SAFE`, `SUSPICIOUS`, or `MALICIOUS`.
 
@@ -192,33 +196,18 @@ PROMPT_SISTEMA = """
 """
 
 
-def _normalizar_texto(texto: str) -> str:
-    """Normaliza texto para comparações de duplicata:
-    - Remove espaços extras, tabs, múltiplas quebras de linha
-    - Lowercase
-    - Strip
-    """
-    import re as _re
-    normalizado = _re.sub(r'\s+', ' ', texto).strip().lower()
-    return normalizado
 
 
-def analisar_com_IA(texto: str, debug: bool = False) -> dict:
-    """Analisa texto com Ollama (load balancing) ou Gemini (fallback).
+def analisar_com_IA(texto: str, imagens: list = None, debug: bool = False) -> dict:
+    """Analisa texto (e opcionalmente imagens) com Ollama ou Gemini (fallback).
+    imagens: lista de strings base64 das imagens do email.
     Se debug=True, retorna campos extras (para Swagger).
     """
     from .models import Feedback
 
-    # Normalizar para busca de duplicatas
-    texto_normalizado = _normalizar_texto(texto)
-
-    # Verificar match no Django DB 
-    feedbacks_existentes = Feedback.objects.all()
-    feedback_existente = None
-    for fb in feedbacks_existentes:
-        if _normalizar_texto(fb.mensagem_original) == texto_normalizado:
-            feedback_existente = fb
-            break
+    # Busca de duplicata via hash (query indexada no banco)
+    hash_texto = Feedback.gerar_hash(texto)
+    feedback_existente = Feedback.objects.filter(hash_conteudo=hash_texto).exclude(risco_ia="").first()
     
     exemplo_exato = None
 
@@ -280,11 +269,17 @@ def analisar_com_IA(texto: str, debug: bool = False) -> dict:
     
     contexto_historico = buscar_exemplos_similares(texto)
 
+    # Preparar infos de imagens para o prompt
+    tem_imagens = imagens and len(imagens) > 0
+    aviso_imagens = ""
+    if tem_imagens:
+        aviso_imagens = f"\n<IMAGES_ATTACHED>This email contains {len(imagens)} inline image(s). Analyze them carefully for phishing indicators (fake logos, QR codes, text-as-image).</IMAGES_ATTACHED>"
+    
     prompt_usuario = f"""
     <CONTEXT>
     <USER_MESSAGE>{texto}</USER_MESSAGE>
     <TECHNICAL_LINK_ANALYSIS_RESULT>{resultado_safe_browsing}</TECHNICAL_LINK_ANALYSIS_RESULT>
-    {contexto_historico} 
+    {contexto_historico}{aviso_imagens}
     </CONTEXT>
     
     ---
@@ -302,28 +297,49 @@ def analisar_com_IA(texto: str, debug: bool = False) -> dict:
         
         for i, client in enumerate(clients_embaralhados):
             try:
+                # Montar mensagem do usuário (com imagens se disponíveis)
+                user_message = {'role': 'user', 'content': prompt_usuario}
+                if tem_imagens:
+                    user_message['images'] = imagens
+                
                 response = client.chat(
                     model=MODELO_OLLAMA,
                     messages=[
                         {'role': 'system', 'content': PROMPT_SISTEMA},
-                        {'role': 'user', 'content': prompt_usuario}
+                        user_message
                     ]
                 )
                 resposta_ia = response['message']['content']
                 modelo_usado = f"Ollama ({MODELO_OLLAMA}) Key {i+1}"
-                print(f"✅ {modelo_usado}")
+                if tem_imagens:
+                    modelo_usado += f" [+{len(imagens)} img]"
+                print(f"{modelo_usado}")
                 break
             except Exception as e:
-                print(f"⚠️ Ollama Key {i+1} falhou: {e}")
+                print(f"Ollama Key {i+1} falhou: {e}")
                 continue
     
     
     if resposta_ia is None:
         try:
-            model = genai.GenerativeModel('gemini-2.5-flash')
-            response = model.generate_content(PROMPT_SISTEMA + "\n" + prompt_usuario)
+            model = genai.GenerativeModel('gemini-3-flash-preview')
+            
+            # Montar conteúdo multimodal para Gemini
+            parts = [PROMPT_SISTEMA + "\n" + prompt_usuario]
+            if tem_imagens:
+                for img_b64 in imagens:
+                    try:
+                        img_bytes = base64.b64decode(img_b64)
+                        img = Image.open(io.BytesIO(img_bytes))
+                        parts.append(img)
+                    except Exception as img_err:
+                        print(f"Erro ao processar imagem para Gemini: {img_err}")
+            
+            response = model.generate_content(parts)
             resposta_ia = response.text
-            modelo_usado = "Gemini 2.5 Flash (fallback)"
+            modelo_usado = "Gemini 3 Flash Preview (fallback)"
+            if tem_imagens:
+                modelo_usado += f" [+{len(imagens)} img]"
             print(f"{modelo_usado}")
         except Exception as e:
             print(f"Todas as APIs falharam: {e}")
@@ -352,7 +368,8 @@ def analisar_com_IA(texto: str, debug: bool = False) -> dict:
                 "links_encontrados": links_encontrados if links_encontrados else [],
                 "resultado_links": resultado_safe_browsing,
                 "exemplos_similares": contexto_historico.strip() if contexto_historico else "Nenhum exemplo similar encontrado.",
-                "exemplo_exato": None
+                "exemplo_exato": None,
+                "imagens_analisadas": len(imagens) if imagens else 0
             }
 
         return resultado_json
