@@ -161,19 +161,25 @@ def obter_texto_email(partes_email):
 
 
 def obter_imagens_base64(service, user_id, message_id, partes_email):
-    """Baixa imagens do email e retorna lista de strings base64."""
+    """Baixa imagens do email e retorna lista de strings base64 (standard encoding)."""
     imagens_b64 = []
     for img_info in partes_email["images"]:
         try:
             if "data" in img_info:
-                # Imagem inline com dados diretos
-                imagens_b64.append(img_info["data"])
+                raw_data = img_info["data"]
             elif "attachmentId" in img_info:
-                # Imagem como attachment — baixar via API
                 att = service.users().messages().attachments().get(
                     userId=user_id, messageId=message_id, id=img_info["attachmentId"]
                 ).execute()
-                imagens_b64.append(att["data"])
+                raw_data = att["data"]
+            else:
+                continue
+            
+            # Gmail retorna base64url (sem padding, com - e _).
+            # Ollama e Gemini esperam base64 standard (com + e /, com padding).
+            img_bytes = base64.urlsafe_b64decode(raw_data + '==')
+            standard_b64 = base64.b64encode(img_bytes).decode('utf-8')
+            imagens_b64.append(standard_b64)
         except Exception as e:
             print(f"    Erro ao baixar imagem '{img_info.get('filename', '?')}': {e}")
     return imagens_b64
