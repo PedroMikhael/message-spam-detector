@@ -17,7 +17,7 @@ from PIL import Image
 # Ollama Cloud clients (load balancing)
 OLLAMA_API_KEY = config("OLLAMA_API_KEY", default="")
 OLLAMA_API_KEY2 = config("OLLAMA_API_KEY2", default="")
-MODELO_OLLAMA = config("OLLAMA_MODEL", default="gemini-3-flash-preview:cloud")
+MODELO_OLLAMA = config("OLLAMA_MODEL", default="deepseek-v3.2:cloud")
 
 ollama_clients = []
 
