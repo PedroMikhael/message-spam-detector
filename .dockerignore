@@ -17,7 +17,7 @@ env/
 .env.local
 .env.*.local
 
-# Credentials (NUNCA enviar para o container)
+# Credentials 
 credentials.json
 token*.json
 
@@ -32,7 +32,7 @@ db.sqlite3
 staticfiles/
 media/
 
-# ChromaDB - INCLUIR no build (tem os 5461 vetores)
+# ChromaDB - 
 !chroma_db/
 
 # Logs

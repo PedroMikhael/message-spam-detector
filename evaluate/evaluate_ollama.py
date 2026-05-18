@@ -5,6 +5,8 @@ import os
 import csv
 from datetime import datetime
 from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix, f1_score
+import numpy as np
+from scipy import stats
 
 MODELO_OLLAMA = 'llama3.2:3b' 
 ARQUIVO_RELATORIO_FINAL = 'relatorio_metrics_ollama.txt'
@@ -159,8 +161,26 @@ def calculate_metrics(config):
         y_t, y_p = df['true_label'].tolist(), df['predicted_label'].tolist()
         res.append(f"Acurácia: {accuracy_score(y_t, y_p)*100:.2f}%")
         res.append(f"F1-Score: {f1_score(y_t, y_p, pos_label=pos, zero_division=0)*100:.2f}%")
-        res.append(f"Tempo Médio: {df['tempo_resposta'].mean():.2f}s")
-    except: res.append("Erro ao processar métricas.")
+        
+        # --- Intervalo de Confiança (95%) para o Tempo de Resposta ---
+        tempos = df['tempo_resposta'].dropna().values
+        n = len(tempos)
+        media = np.mean(tempos)
+        desvio_padrao = np.std(tempos, ddof=1)  # desvio padrão amostral
+        erro_padrao = desvio_padrao / np.sqrt(n)
+        
+        # t crítico bicaudal para 95% de confiança
+        t_critico = stats.t.ppf(0.975, df=n - 1)
+        margem_erro = t_critico * erro_padrao
+        ic_inferior = media - margem_erro
+        ic_superior = media + margem_erro
+        
+        res.append(f"Tempo Médio: {media:.2f}s")
+        res.append(f"Desvio Padrão: {desvio_padrao:.2f}s")
+        res.append(f"IC 95%: {media:.2f}s ± {margem_erro:.2f}s  [{ic_inferior:.2f}s, {ic_superior:.2f}s]")
+        res.append(f"Amostras (n): {n}")
+    except Exception as e:
+        res.append(f"Erro ao processar métricas: {e}")
     return res
 
 if __name__ == "__main__":
