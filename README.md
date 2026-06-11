@@ -378,7 +378,6 @@ verificai/
 | **Pedro Mikhael** | Developer |
 | **Joao Victor** | Developer |
 | **Valderlan Nobre** | Scrum Master |
-| **Mozar Braga** | Developer |
 
 
 ---
