@@ -4,6 +4,7 @@ import json
 import re
 import base64
 import io
+from .sanitizer import sanitizar_texto
 from django.conf import settings
 from decouple import config
 from ollama import Client
@@ -135,8 +136,16 @@ def _mapear_label_para_risk_level(label: str) -> str:
 def verificar_link_com_safe_browsing(link: str) -> str:
     """Verifica URL via Google Safe Browsing API."""
     url_api = "https://safebrowsing.googleapis.com/v4/threatMatches:find"
-    api_key = settings.SAFE_BROWSING_API_KEY
-    payload = {"client": {"clientId": "spamapiproject", "clientVersion": "1.0.0"},"threatInfo": {"threatTypes": ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],"platformTypes": ["ANY_PLATFORM"],"threatEntryTypes": ["URL"],"threatEntries": [{"url": link}]}}
+    api_key = getattr(settings, 'SAFE_BROWSING_API_KEY2', settings.SAFE_BROWSING_API_KEY)
+    payload = {
+        "client": {"clientId": "spamapiproject", "clientVersion": "1.0.0"},
+        "threatInfo": {
+            "threatTypes": ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
+            "platformTypes": ["ANY_PLATFORM"],
+            "threatEntryTypes": ["URL"],
+            "threatEntries": [{"url": link}]
+        }
+    }
     params = {'key': api_key}
     try:
         response = requests.post(url_api, params=params, json=payload)
@@ -204,6 +213,10 @@ def analisar_com_IA(texto: str, imagens: list = None, debug: bool = False) -> di
     Se debug=True, retorna campos extras (para Swagger).
     """
     from .models import Feedback
+
+    # Sanitizar dados sensíveis (PII) antes de qualquer processamento
+    resultado_sanitizacao = sanitizar_texto(texto)
+    texto = resultado_sanitizacao.texto_sanitizado
 
     # Busca de duplicata via hash (query indexada no banco)
     hash_texto = Feedback.gerar_hash(texto)
@@ -369,7 +382,11 @@ def analisar_com_IA(texto: str, imagens: list = None, debug: bool = False) -> di
                 "resultado_links": resultado_safe_browsing,
                 "exemplos_similares": contexto_historico.strip() if contexto_historico else "Nenhum exemplo similar encontrado.",
                 "exemplo_exato": None,
-                "imagens_analisadas": len(imagens) if imagens else 0
+                "imagens_analisadas": len(imagens) if imagens else 0,
+                "sanitizacao": {
+                    "dados_removidos": resultado_sanitizacao.dados_removidos,
+                    "total_removidos": resultado_sanitizacao.total_removidos
+                }
             }
 
         return resultado_json

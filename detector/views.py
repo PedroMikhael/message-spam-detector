@@ -4,6 +4,7 @@ import json
 from django.conf import settings
 from .models import Feedback
 from .services import analisar_com_IA, enviar_mensagem_whatsapp, adicionar_ao_chromadb
+from .sanitizer import sanitizar_texto
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -49,11 +50,15 @@ def analisar_mensagem(request):
     texto = serializer.validated_data['texto']
     remetente = serializer.validated_data.get('remetente', 'swagger-test')
 
+    # Sanitizar dados sensíveis antes de qualquer processamento
+    texto = sanitizar_texto(texto).texto_sanitizado
+    remetente = sanitizar_texto(remetente).texto_sanitizado
+
     try:
         resultado_analise = analisar_com_IA(texto, debug=True)
         
         feedback_obj = Feedback.objects.create(
-            mensagem_original=texto,
+            mensagem=texto,
             remetente=remetente,
             risco_ia=resultado_analise.get('risk_level', 'INDETERMINADO'),
             analise_ia=str(resultado_analise)
@@ -329,12 +334,16 @@ def webhook_whatsapp(request):
                 origem = "script_evaluate"
 
             if texto_mensagem:
+                # Sanitizar dados sensíveis antes de qualquer processamento
+                texto_mensagem = sanitizar_texto(texto_mensagem).texto_sanitizado
+
                 resultado_analise = analisar_com_IA(texto_mensagem)
 
                 if origem == "whatsapp":
+                    remetente_sanitizado = sanitizar_texto(remetente).texto_sanitizado if remetente else None
                     Feedback.objects.create(
-                        mensagem_original=texto_mensagem,
-                        remetente=remetente,
+                        mensagem=texto_mensagem,
+                        remetente=remetente_sanitizado,
                         risco_ia=resultado_analise.get('risk_level', 'INDETERMINADO'),
                         analise_ia=str(resultado_analise.get('analysis_details', ''))
                     )
@@ -390,7 +399,7 @@ def processar_feedback_treinamento(request):
                 return HttpResponse("Este feedback já foi processado anteriormente.")
 
             sucesso_treinamento = adicionar_ao_chromadb(
-                texto=feedback_registro.mensagem_original,
+                texto=feedback_registro.mensagem,
                 rotulo=novo_rotulo
             )
 

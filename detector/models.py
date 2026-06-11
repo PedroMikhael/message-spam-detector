@@ -5,7 +5,7 @@ import re
 
 
 class Feedback(models.Model):
-    mensagem_original = models.TextField()
+    mensagem = models.TextField()  # Texto sanitizado (sem dados sensíveis)
     remetente = models.CharField(max_length=255)
 
     # Como a IA classificou
@@ -31,9 +31,9 @@ class Feedback(models.Model):
         return hashlib.sha256(normalizado.encode('utf-8')).hexdigest()
 
     def save(self, *args, **kwargs):
-        if not self.hash_conteudo and self.mensagem_original:
-            self.hash_conteudo = Feedback.gerar_hash(self.mensagem_original)
+        if not self.hash_conteudo and self.mensagem:
+            self.hash_conteudo = Feedback.gerar_hash(self.mensagem)
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Análise para {self.remetente} em {self.timestamp.strftime('%d/%m/%Y %H:%M')}"
+        return f"Análise para {self.remetente} em {self.timestamp.strftime('%d/%m/%Y %H:%M')}"

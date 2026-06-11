@@ -21,7 +21,8 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'spamapi.settings') 
 django.setup()
 from detector.services import analisar_com_IA
-from detector.models import Feedback 
+from detector.models import Feedback
+from detector.sanitizer import sanitizar_texto
 
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
@@ -274,13 +275,16 @@ def check_and_process_emails(service, account_name="Bot"):
             preview = conteudo_limpo[:200].replace('\n', ' ')
             print(f"   Preview (limpo): {preview}...")
 
-            
+            # Sanitizar dados sensíveis (PII) antes de qualquer processamento
+            resultado_sanitizacao = sanitizar_texto(conteudo_limpo)
+            conteudo_limpo = resultado_sanitizacao.texto_sanitizado
+
             if is_mensagem_vazia(conteudo_limpo) and not imagens_b64:
                 print(f"     Mensagem vazia detectada (sem texto e sem imagens) — respondendo sem IA.")
                 
                 nova_analise = Feedback.objects.create(
-                    mensagem_original=conteudo_limpo,
-                    remetente=sender,
+                    mensagem=conteudo_limpo,
+                    remetente=sanitizar_texto(sender).texto_sanitizado,
                     risco_ia="VAZIO",
                     analise_ia="Mensagem vazia — nenhuma análise necessária."
                 )
@@ -305,8 +309,8 @@ def check_and_process_emails(service, account_name="Bot"):
             print(f"    Motivo: {motivo[:150]}...")
 
             nova_analise = Feedback.objects.create(
-                mensagem_original=conteudo_limpo,
-                remetente=sender,
+                mensagem=conteudo_limpo,
+                remetente=sanitizar_texto(sender).texto_sanitizado,
                 risco_ia=risk_level,
                 analise_ia=str(resultado_analise)
             )

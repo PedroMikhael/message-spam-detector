@@ -7,7 +7,7 @@ from .models import Feedback
 class FeedbackAdmin(admin.ModelAdmin):
     list_display = ('id', 'timestamp', 'risco_ia', 'feedback_formatado', 'remetente')
     list_filter = ('risco_ia', 'feedback_usuario_correto')
-    search_fields = ('mensagem_original', 'remetente')
+    search_fields = ('mensagem', 'remetente')
     ordering = ('-timestamp',)
 
     def feedback_formatado(self, obj):
