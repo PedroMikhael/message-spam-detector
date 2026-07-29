@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VerificAI - Detector de Spam e Phishing</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+
+    <!-- ═══ CABEÇALHO ═══ -->
+    <header class="popup-header">
+      <div class="header-brand">
+        <img src="https://huggingface.co/spaces/PedroMikhael/VerificAI/resolve/main/media/larcesLogo.png" 
+             alt="LARCES - UECE" class="header-logo">
+        <div class="header-text">
+          <h1>VerificAI</h1>
+          <span class="header-subtitle">Detector de Spam e Phishing</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ═══ TELA 1: CARREGANDO ═══ -->
+    <section id="tela-loading" class="tela ativa">
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p class="loading-text">Lendo e-mail aberto...</p>
+        <p class="loading-sub">Aguarde enquanto analisamos com Inteligência Artificial</p>
+      </div>
+    </section>
+
+    <!-- ═══ TELA 2: RESULTADO (Semáforo) ═══ -->
+    <section id="tela-resultado" class="tela">
+      <div class="resultado-container">
+        <!-- Banner do Semáforo -->
+        <div id="resultado-banner" class="resultado-banner">
+          <img id="resultado-semaforo-img" src="" alt="Semáforo" class="semaforo-img">
+          <h2 id="resultado-classificacao">Classificação</h2>
+        </div>
+
+        <!-- Tabela de Informações -->
+        <table class="resultado-tabela">
+          <tr>
+            <td class="label-cell">Classificação</td>
+            <td class="value-cell" id="resultado-classificacao-text"></td>
+          </tr>
+          <tr>
+            <td class="label-cell">Motivo</td>
+            <td class="value-cell" id="resultado-motivo"></td>
+          </tr>
+          <tr>
+            <td class="label-cell">Precaução</td>
+            <td class="value-cell" id="resultado-precaucao"></td>
+          </tr>
+        </table>
+
+        <!-- Botões de Feedback -->
+        <div class="feedback-section">
+          <p class="feedback-pergunta"><em>Minha análise foi útil?</em></p>
+          <div class="feedback-botoes">
+            <a id="btn-correto" href="#" target="_blank" class="btn-feedback btn-correto">Sim, acertou</a>
+            <a id="btn-incorreto" href="#" target="_blank" class="btn-feedback btn-incorreto">Não, errou</a>
+          </div>
+        </div>
+
+        <!-- Rodapé LARCES -->
+        <div class="resultado-footer">
+          <img src="https://huggingface.co/spaces/PedroMikhael/VerificAI/resolve/main/media/larcesLogo.png" 
+               alt="LARCES - UECE" class="footer-logo">
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ TELA 3: TUTORIAL DE ENCAMINHAMENTO (Erro) ═══ -->
+    <section id="tela-erro" class="tela">
+      <div class="erro-container">
+        <div class="erro-icone">📧</div>
+        <h2 class="erro-titulo">Não foi possível ler o e-mail</h2>
+        <p class="erro-descricao">
+          Não conseguimos extrair automaticamente o conteúdo do e-mail nesta página.
+          Mas não se preocupe! Siga o passo a passo abaixo:
+        </p>
+
+        <div class="tutorial-passos">
+          <div class="passo">
+            <span class="passo-numero">1</span>
+            <p>Abra o e-mail suspeito na sua caixa de entrada.</p>
+          </div>
+          <div class="passo">
+            <span class="passo-numero">2</span>
+            <p>Clique em <strong>Encaminhar</strong> no seu leitor de e-mail.</p>
+          </div>
+          <div class="passo">
+            <span class="passo-numero">3</span>
+            <p>Envie o e-mail para:</p>
+            <div class="email-destaque">
+              <strong>verificai@uece.br</strong>
+            </div>
+          </div>
+          <div class="passo">
+            <span class="passo-numero">4</span>
+            <p>Nosso bot analisará a mensagem e enviará a resposta diretamente para o seu e-mail!</p>
+          </div>
+        </div>
+
+        <button id="btn-tentar-novamente" class="btn-tentar">Tentar Novamente</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

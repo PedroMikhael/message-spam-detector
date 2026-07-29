@@ -17,6 +17,12 @@ class AnalisarEmailSerializer(serializers.Serializer):
         default="swagger-test",
         help_text="Identificação do remetente (opcional, padrão: 'swagger-test')."
     )
+    imagens = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        default=list,
+        help_text="Lista de imagens em base64 do email para análise multimodal (opcional)."
+    )
 
 
 class TreinarRAGSerializer(serializers.Serializer):

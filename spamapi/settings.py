@@ -71,6 +71,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:9000",
     "https://pedromikhael-verificai.hf.space",
 ]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^chrome-extension://.*$",  # Extensão Chrome do VerificAI
+]
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # Permite tudo em dev
 
 TEMPLATES = [

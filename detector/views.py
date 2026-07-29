@@ -49,13 +49,14 @@ def analisar_mensagem(request):
     
     texto = serializer.validated_data['texto']
     remetente = serializer.validated_data.get('remetente', 'swagger-test')
+    imagens = serializer.validated_data.get('imagens', None) or None
 
     # Sanitizar dados sensíveis antes de qualquer processamento
     texto = sanitizar_texto(texto).texto_sanitizado
     remetente = sanitizar_texto(remetente).texto_sanitizado
 
     try:
-        resultado_analise = analisar_com_IA(texto, debug=True)
+        resultado_analise = analisar_com_IA(texto, imagens=imagens, debug=True)
         
         feedback_obj = Feedback.objects.create(
             mensagem=texto,

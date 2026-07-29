@@ -29,3 +29,10 @@ erro_gemini.txt
 
 # Logs
 email_ollama_output.log
+
+# Metricas
+metricas_judge/
+metricas_novas/
+metrics/
+
+database/

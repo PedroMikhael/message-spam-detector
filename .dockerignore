@@ -52,3 +52,9 @@ metrics/
 evaluate/
 Dockerfile
 .dockerignore
+database/
+
+# Metricas
+metricas_judge/
+metricas_novas/
+metrics/
