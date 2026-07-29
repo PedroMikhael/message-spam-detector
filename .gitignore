@@ -35,4 +35,16 @@ metricas_judge/
 metricas_novas/
 metrics/
 
-database/
+# Ignorar arquivos grandes do database (>100MB)
+database/malicious_urls.csv
+database/balanced_urls.csv
+database/*.zip
+database/*.txt
+database/*.json
+database/resultados_url_verifiers.csv
+
+
+
+
+# Ignorar imagens de gráficos temporários
+media/tempo_*.png

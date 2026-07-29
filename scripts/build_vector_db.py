@@ -64,6 +64,10 @@ def main():
     chunks = splitter.split_documents(all_docs)
     print("   Total de chunks criados:", len(chunks))
 
+    if not chunks:
+        print("\n⚠️ Nenhum documento/chunk para processar. Pulando criação do ChromaDB.")
+        return
+
     # Embeddings (usando langchain_huggingface atualizado)
     print("\n-> Carregando modelo de embeddings (bge-small)...")
     embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5")
