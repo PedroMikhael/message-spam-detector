@@ -289,7 +289,7 @@ def check_and_process_emails(service, account_name="Bot"):
                     analise_ia="Mensagem vazia — nenhuma análise necessária."
                 )
                 
-                send_reply_vazio(service, sender, subject)
+                send_reply_vazio(service, sender, subject, nova_analise.id)
                 service.users().messages().modify(userId="me", id=message_info["id"], body={'removeLabelIds': ['UNREAD']}).execute()
                 print(f"    [{account_name}] Resposta (vazia) enviada e e-mail marcado como lido!")
                 print(f"{'='*60}\n")
@@ -355,7 +355,7 @@ def send_reply(service, to, subject, motivo, precaucao, risk_level="INDETERMINAD
     semaforo_url = f"https://huggingface.co/spaces/PedroMikhael/VerificAI/resolve/main/media/{semaforo['img']}"
     classificacao = semaforo["label"]
     cor = semaforo["cor"]
-    larces_logo = "https://huggingface.co/spaces/PedroMikhael/VerificAI/resolve/main/media/larcesLogo.png"
+    verificai_logo = "https://huggingface.co/spaces/PedroMikhael/VerificAI/resolve/main/media/logoVerificAI.png"
 
     html_content = f"""
     <html>
@@ -419,7 +419,7 @@ def send_reply(service, to, subject, motivo, precaucao, risk_level="INDETERMINAD
                 </div>
                 </div>
                 <div style="text-align: center; padding: 16px; border-top: 1px solid #f0f0f0;">
-                    <img src="{larces_logo}" alt="LARCES - UECE" style="width: 100px; height: auto; opacity: 0.8;">
+                    <img src="{verificai_logo}" alt="VerificAI" style="width: 100px; height: auto; opacity: 0.8;">
                 </div>
             </div>
         </body>
@@ -441,10 +441,10 @@ def send_reply(service, to, subject, motivo, precaucao, risk_level="INDETERMINAD
     service.users().messages().send(userId="me", body=create_message).execute()
 
 
-def send_reply_vazio(service, to, subject):
+def send_reply_vazio(service, to, subject, feedback_id):
     """Envia resposta para emails com conteúdo vazio — sem chamar IA."""
     
-    larces_logo = "https://huggingface.co/spaces/PedroMikhael/VerificAI/resolve/main/media/larcesLogo.png"
+    verificai_logo = "https://huggingface.co/spaces/PedroMikhael/VerificAI/resolve/main/media/logoVerificAI.png"
     
     html_content = f"""
     <html>
@@ -464,7 +464,7 @@ def send_reply_vazio(service, to, subject):
                     </p>
                 </div>
                 <div style="text-align: center; padding: 16px; border-top: 1px solid #f0f0f0;">
-                    <img src="{larces_logo}" alt="LARCES - UECE" style="width: 100px; height: auto; opacity: 0.8;">
+                    <img src="{verificai_logo}" alt="VerificAI" style="width: 100px; height: auto; opacity: 0.8;">
                 </div>
             </div>
         </body>
