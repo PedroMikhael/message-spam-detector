@@ -58,20 +58,25 @@ def analisar_mensagem(request):
     try:
         resultado_analise = analisar_com_IA(texto, imagens=imagens, debug=True)
         
+        risk_level = resultado_analise.get('risk_level', 'INDETERMINADO')
+
         feedback_obj = Feedback.objects.create(
             mensagem=texto,
             remetente=remetente,
-            risco_ia=resultado_analise.get('risk_level', 'INDETERMINADO'),
+            risco_ia=risk_level,
             analise_ia=str(resultado_analise)
         )
 
+        # Retroalimentação automática: classificação da IA vai direto pro banco vetorial
+        adicionar_ao_chromadb(texto=texto, rotulo=risk_level)
+        feedback_obj.treinamento_concluido = True
+        feedback_obj.save(update_fields=['treinamento_concluido'])
+
         # Enrich response with structured fields
-        risk_level = resultado_analise.get('risk_level', 'INDETERMINADO')
         semaforo = SEMAFORO_MAP.get(risk_level, SEMAFORO_DEFAULT)
 
         resultado_analise['classificacao'] = semaforo['label']
         resultado_analise['semaforo_image_url'] = f"{HF_MEDIA_BASE}/{semaforo['img']}"
-        resultado_analise['feedback_id'] = feedback_obj.id
         resultado_analise['analise_url'] = request.build_absolute_uri(f'/analise/{feedback_obj.id}/visualizar/')
         
         return Response(resultado_analise, status=status.HTTP_200_OK)
@@ -112,9 +117,7 @@ def visualizar_analise(request, feedback_id):
         if analise.analise_ia:
             motivo = analise.analise_ia[:500]
 
-    base_url = request.build_absolute_uri('/')[:-1]
-    link_correto = f"{base_url}/feedback/{feedback_id}/correto/"
-    link_incorreto = f"{base_url}/feedback/{feedback_id}/incorreto/"
+
 
     html = f"""
     <!DOCTYPE html>
@@ -173,30 +176,6 @@ def visualizar_analise(request, feedback_id):
                 font-size: 15px;
                 line-height: 1.5;
             }}
-            .feedback-section {{
-                text-align: center;
-                padding: 20px 32px 8px;
-                border-top: 1px solid #eee;
-            }}
-            .feedback-section p {{
-                font-size: 14px;
-                color: #777;
-                margin-bottom: 12px;
-            }}
-            .btn {{
-                display: inline-block;
-                padding: 10px 22px;
-                color: white;
-                text-decoration: none;
-                border-radius: 8px;
-                font-weight: 600;
-                font-size: 14px;
-                margin: 0 6px;
-                transition: opacity 0.2s;
-            }}
-            .btn:hover {{ opacity: 0.85; }}
-            .btn-correct {{ background: #28a745; }}
-            .btn-incorrect {{ background: #dc3545; }}
             .footer {{
                 text-align: center;
                 padding: 20px;
@@ -226,11 +205,6 @@ def visualizar_analise(request, feedback_id):
                         <td>{precaucao}</td>
                     </tr>
                 </table>
-            </div>
-            <div class="feedback-section">
-                <p><em>Minha análise foi útil?</em></p>
-                <a href="{link_correto}" class="btn btn-correct">Sim, acertou</a>
-                <a href="{link_incorreto}" class="btn btn-incorrect">Não, errou</a>
             </div>
             <div class="footer">
                 <img src="{LARCES_LOGO_URL}" alt="LARCES - UECE">
@@ -357,61 +331,5 @@ def webhook_whatsapp(request):
             return HttpResponse(f"Erro interno: {e}", status=500)
 
 
-def registrar_feedback(request, feedback_id, resultado):
-    try:
-        analise = Feedback.objects.get(id=feedback_id)
-        
-        if analise.feedback_usuario_correto is not None:
-            status_antigo = "Correto" if analise.feedback_usuario_correto else "Incorreto"
-            return HttpResponse(f"""
-            <html><head><title>Feedback Já Registrado</title></head>
-            <body style="font-family: Arial; text-align: center; padding: 50px;">
-                <h1 style="color: #ffc107;">⚠️ Feedback Já Registrado</h1>
-                <p>Registrado como: <strong>{status_antigo}</strong>.</p>
-            </body></html>""")
-
-        analise.feedback_usuario_correto = (resultado == 'correto')
-        analise.save()
-        
-        return HttpResponse("""
-        <html><head><title>Obrigado!</title></head>
-        <body style="font-family: Arial; text-align: center; padding: 50px;">
-            <h1 style="color: #28a745;">✅ Obrigado pelo seu feedback!</h1>
-            <p>Sua resposta foi registrada com sucesso.</p>
-        </body></html>""")
-        
-    except Feedback.DoesNotExist:
-        return HttpResponse("<h1>Análise não encontrada.</h1>", status=404)
-    
-
-def processar_feedback_treinamento(request):
-    """Recebe feedback do usuário e aciona treinamento RAG."""
-    if request.method == 'GET':
-        feedback_id = request.GET.get('id')
-        novo_rotulo = request.GET.get('rotulo') 
-
-        if not feedback_id or not novo_rotulo:
-            return JsonResponse({'status': 'erro', 'mensagem': 'Parâmetros ID e RÓTULO são obrigatórios.'}, status=400)
-        
-        try:
-            feedback_registro = get_object_or_404(Feedback, id=feedback_id)
-
-            if feedback_registro.treinamento_concluido:
-                return HttpResponse("Este feedback já foi processado anteriormente.")
-
-            sucesso_treinamento = adicionar_ao_chromadb(
-                texto=feedback_registro.mensagem,
-                rotulo=novo_rotulo
-            )
-
-            if sucesso_treinamento:
-                feedback_registro.treinamento_concluido = True
-                feedback_registro.save()
-                return HttpResponse("✅ Feedback processado com sucesso!")
-            else:
-                return HttpResponse("❌ Erro ao atualizar o modelo.", status=500)
-
-        except Exception as e:
-            return JsonResponse({'status': 'erro', 'mensagem': str(e)}, status=500)
-    
-    return JsonResponse({'status': 'erro', 'mensagem': 'Método não permitido.'}, status=405)
+# As views registrar_feedback e processar_feedback_treinamento foram removidas.
+# O feedback humano foi eliminado — a classificação da IA retroalimenta o ChromaDB automaticamente.

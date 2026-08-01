@@ -49,7 +49,6 @@ class AnaliseResponseSerializer(serializers.Serializer):
     precaucao = serializers.CharField(help_text="Recomendação prática para o usuário.")
     semaforo_image_url = serializers.URLField(help_text="URL da imagem do semáforo correspondente ao risco.")
     analise_url = serializers.URLField(help_text="Link para visualizar o relatório visual em HTML.")
-    feedback_id = serializers.IntegerField(help_text="ID para registrar feedback sobre esta análise.")
     analysis_details = serializers.ListField(
         child=serializers.CharField(),
         help_text="Lista de pontos técnicos da análise (uso interno)."

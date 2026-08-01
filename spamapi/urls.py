@@ -13,8 +13,6 @@ from detector.views import (
     detalhe_analise,
     treinar_rag,
     webhook_whatsapp,
-    registrar_feedback,
-    processar_feedback_treinamento,
 )
 
 schema_view = get_schema_view(
@@ -44,9 +42,6 @@ urlpatterns = [
     # Swagger
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 
-    # Feedback links (email)
-    path('feedback/<int:feedback_id>/<str:resultado>/', registrar_feedback, name='registrar_feedback'),
-    path('feedback/', processar_feedback_treinamento, name='feedback_treinamento'),
 
     # Visual report
     path('analise/<int:feedback_id>/visualizar/', visualizar_analise, name='visualizar_analise'),

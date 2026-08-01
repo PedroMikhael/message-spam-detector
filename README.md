@@ -19,13 +19,14 @@ app_port: 7860
 ![Ollama](https://img.shields.io/badge/Ollama-000000?style=for-the-badge&logo=ollama&logoColor=white)
 ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
 ![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6F61?style=for-the-badge)
+![Chrome Extension](https://img.shields.io/badge/Chrome_Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![Hugging Face](https://img.shields.io/badge/Hugging_Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)
 
 <br>
 
-*An intelligent spam and phishing detection system powered by generative AI, RAG (Retrieval-Augmented Generation), and real-time link verification.*
+*An intelligent spam and phishing detection system powered by generative AI, LLM-as-a-Judge architecture, RAG (Retrieval-Augmented Generation), real-time link verification, and a dedicated Google Chrome Extension.*
 
 **[Live Demo](https://pedromikhael-verificai.hf.space/swagger/)** · **[Admin Panel](https://pedromikhael-verificai.hf.space/admin/)** · **[Examples](EXAMPLES.md)**
 
@@ -37,10 +38,11 @@ app_port: 7860
 
 - [About the Project](#about-the-project)
 - [Features](#features)
+- [Google Chrome Extension](#google-chrome-extension)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
 - [API Endpoints](#api-endpoints)
-- [Model Benchmarks](#model-benchmarks)
+- [LLM-as-a-Judge & Model Benchmarks](#llm-as-a-judge--model-benchmarks)
 - [Local Installation](#local-installation)
 - [Usage](#usage)
 - [Project Structure](#project-structure)
@@ -50,9 +52,12 @@ app_port: 7860
 
 ## About the Project
 
-**VerificAI** is a message and email analysis system that combines **generative AI** with **real-time link verification** to identify spam, phishing, and digital scam attempts.
+**VerificAI** is a message and email analysis system that combines **generative AI** with **real-time link verification** and **LLM-as-a-Judge evaluation** to identify spam, phishing, and digital scam attempts.
 
-The system operates as an email bot: the user forwards suspicious messages to a dedicated Gmail address, and the bot automatically replies with a detailed analysis, risk classification (traffic light system), and feedback links.
+The system operates across multiple channels:
+1. **Automated Email Bot:** Users forward suspicious emails to a dedicated address, and the bot replies with a detailed analysis and traffic light risk classification.
+2. **Google Chrome Extension:** Users analyze emails open in their browser (Gmail / Outlook Web) with a single click.
+3. **REST API & Webhooks:** Integrations for external tools and automated workflows.
 
 > Developed as an academic requirement for the **Computer Science** program at **UECE** (State University of Ceara), within **LARCES** (Computer Networks and Security Laboratory), under the supervision of Prof. **Rafael Lopes Gomes**.
 
@@ -60,15 +65,15 @@ The system operates as an email bot: the user forwards suspicious messages to a 
 
 ## Features
 
-### Dual AI Engine
-- **Ollama Cloud** as the primary engine with **load balancing** across multiple API keys
+### Dual AI Engine & LLM-as-a-Judge Pipeline
+- **Ollama Cloud** as the primary engine with **load balancing** across multiple API keys (`gpt-oss:120b-cloud`, `deepseek-v4-pro`, etc.)
 - **Google Gemini** as an automatic fallback for high availability
-- Contextual analysis with a cybersecurity-specialized prompt
+- **LLM-as-a-Judge Verification:** A secondary LLM evaluator (`deepseek-v4-flash:cloud`) that validates primary classifications, measuring confirmations vs. corrections for continuous accuracy refinement
 
 ### RAG (Retrieval-Augmented Generation)
 - **ChromaDB** vector store with **10,000+ documents** from real spam/ham datasets
 - Embeddings powered by **BAAI/bge-small-en-v1.5** via HuggingFace
-- Similarity search to contextualize analyses with real-world examples
+- Similarity search to contextualize analyses with real-world historical examples
 - **Active Learning**: user feedback is incorporated back into the vector store
 
 ### Real-Time Link Verification
@@ -76,22 +81,39 @@ The system operates as an email bot: the user forwards suspicious messages to a 
 - Detection of malware, phishing, social engineering, and unwanted software
 - Results feed into the AI analysis context
 
+### Google Chrome Extension (Manifest V3)
+- One-click analysis of active emails in **Gmail** and **Outlook Web**
+- Intelligent DOM parser extracting subject, sender, body text, and inline Base64 images for multimodal analysis
+- Visual traffic light output matching the email bot formatting with instant feedback buttons
+- Automatic error handling with a step-by-step forwarding tutorial (`verificai@uece.br`)
+
 ### Automated Email Bot
 - Continuous monitoring via **Gmail API** (polling every 10s)
 - Processing of forwarded emails with intelligent extraction of original content
 - Styled **HTML responses** with risk traffic light (green/yellow/red) and feedback links
 - **OAuth 2.0** authentication with automatic token refresh
 
-### Admin Dashboard
+### Admin Dashboard & Active Learning Loop
 - Dashboard built with **Django Admin + Jazzmin**
-- Real-time performance metrics
-- Filters by risk level and feedback status
-- Search by content and sender
+- Real-time accuracy metrics and feedback management
+- Incorrect feedback automatically retrains the vector database
 
-### Feedback Loop System
-- Feedback links embedded in responses ("Correct" / "Incorrect")
-- Feedback stored in the database for metrics
-- Active Learning: incorrect feedback automatically retrains the RAG
+---
+
+## Google Chrome Extension
+
+The project includes a Manifest V3 Google Chrome Extension located in `chrome_extension/`.
+
+### Highlights:
+- **Zero User Configuration:** Pre-configured to communicate directly with the production backend API (`https://pedromikhael-verificai.hf.space/api/analisar/`).
+- **Multimodal Extraction:** Captures text and inline Base64 images directly from the webmail DOM.
+- **Traffic Light UI:** Displays color-coded risk levels (**Green** #28a745 for Safe, **Yellow** #ffc107 for Suspicious, **Red** #dc3545 for Malicious), simple Portuguese explanations, practical safety precautions, and feedback buttons.
+- **Error Fallback:** If no active email is detected, displays a user-friendly tutorial guiding the user to forward the email to **`verificai@uece.br`**.
+
+### Installation (Developer Mode):
+1. Open Chrome and navigate to `chrome://extensions/`.
+2. Enable **Developer mode** (top right).
+3. Click **Load unpacked** and select the `chrome_extension/` directory.
 
 ---
 
@@ -103,16 +125,17 @@ The system operates as an email bot: the user forwards suspicious messages to a 
 
 </div>
 
-**Email Bot Flow:**
+**Analysis Flow:**
 ```
-User forwards suspicious email
-  +-> Gmail API (polling)
-       +-> Original content extraction
-            +-> RAG search (similar examples from ChromaDB)
-            +-> Link verification (Safe Browsing API)
-            +-> AI analysis (Ollama Cloud -> Gemini fallback)
-                 +-> HTML response with traffic light + feedback links
-                      +-> User feedback -> Active Learning
+User (Chrome Extension / Email Bot / REST API)
+  +-> DOM Parser / Gmail API / Request Payload
+       +-> Sanitization (PII Regex removal)
+            +-> RAG Search (ChromaDB similarity search)
+            +-> URL Verification (Google Safe Browsing API)
+            +-> Primary LLM Analysis (Ollama Cloud -> Gemini fallback)
+                 +-> LLM-as-a-Judge Validation (DeepSeek Flash)
+                      +-> HTML / Popup Response (Traffic light + Feedback links)
+                           +-> User Feedback -> Active Learning RAG update
 ```
 
 ---
@@ -123,120 +146,85 @@ User forwards suspicious email
 
 | Technology | Purpose |
 |---|---|
-| **Python 3.11** | Primary language |
+| **Python 3.11** | Primary backend language |
 | **Django 5.0+** | Web framework / ORM / Admin |
-| **Django REST Framework** | REST API with serializers and views |
+| **Django REST Framework** | REST API with serializers and CORS support |
+| **Google Chrome Extension (MV3)** | Client extension for Gmail & Outlook Web |
 | **drf-yasg** | Interactive Swagger/OpenAPI documentation |
 | **Google Gemini API** | LLM for message analysis (fallback) |
-| **Ollama Cloud** | Primary LLM with load balancing |
+| **Ollama Cloud** | Primary LLM engine with load balancing |
+| **LLM-as-a-Judge** | Secondary LLM evaluator (`deepseek-v4-flash`) for metrics & verification |
 | **Google Safe Browsing API v4** | Real-time malicious URL verification |
-| **Gmail API (OAuth 2.0)** | Email monitoring and sending |
-| **LangChain** | RAG orchestration (langchain-chroma, langchain-huggingface) |
+| **Gmail API (OAuth 2.0)** | Automated email monitoring bot |
+| **LangChain** | RAG orchestration (`langchain-chroma`, `langchain-huggingface`) |
 | **ChromaDB** | Vector database for RAG |
-| **HuggingFace Transformers** | Embeddings (BAAI/bge-small-en-v1.5) |
-| **scikit-learn** | Model evaluation metrics |
+| **HuggingFace Transformers** | Embeddings (`BAAI/bge-small-en-v1.5`) |
 
 ### Infrastructure & DevOps
 
 | Technology | Purpose |
 |---|---|
 | **Docker** | Application containerization |
-| **Hugging Face Spaces** | Cloud hosting (production) |
+| **Hugging Face Spaces** | Cloud hosting & container deployment |
 | **Gunicorn** | Production WSGI server |
 | **WhiteNoise** | Static file serving |
 | **PostgreSQL (Supabase)** | Production database |
 | **SQLite** | Local database (fallback) |
 | **Git & GitHub** | Version control |
 
-### Data Science & Evaluation
-
-| Technology | Purpose |
-|---|---|
-| **pandas / numpy** | Dataset processing |
-| **matplotlib / seaborn / plotly** | Metrics visualization |
-| **scikit-learn** | Accuracy, Precision, Recall, F1-Score |
-
 ---
 
 ## API Endpoints
 
-The REST API is automatically documented via the Swagger UI.
-
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/analisar/` | Analyzes a message/email and returns its classification |
+| `POST` | `/api/analisar/` | Analyzes text and optional Base64 images, returning risk classification |
 | `GET` | `/api/analises/` | Lists all saved analyses |
 | `GET` | `/api/analises/{id}/` | Details of a specific analysis |
 | `POST` | `/api/treinar-rag/` | Adds an example to the vector store (Active Learning) |
-| `GET` | `/api/feedback/{id}/{resultado}/` | Registers user feedback (correct/incorrect) |
+| `GET` | `/feedback/{id}/{resultado}/` | Registers user feedback (correct/incorrect) |
 | `GET` | `/health/` | Health check endpoint |
 
 > **Interactive documentation:** [Swagger UI](https://pedromikhael-verificai.hf.space/swagger/)
 
-### Request Example
-
-```bash
-curl -X POST https://pedromikhael-verificai.hf.space/api/analisar/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "texto": "Congratulations! You have been selected to receive $10,000. Click here: http://suspicious-example.com",
-    "remetente": "test@email.com"
-  }'
-```
-
-### Response Example
-
-```json
-{
-  "risco": "MALICIOUS",
-  "analise": "This message shows typical characteristics of a scam...",
-  "links_encontrados": ["http://suspicious-example.com"],
-  "resultado_safe_browsing": "MALICIOUS",
-  "feedback_id": 42
-}
-```
-
 ---
 
-## Model Benchmarks
+## LLM-as-a-Judge & Model Benchmarks
 
-The system was evaluated with multiple models using real email and SMS datasets:
+The system was rigorously evaluated using an **LLM-as-a-Judge** framework where a high-capability primary model performs initial classification and a dedicated Judge model (`deepseek-v4-flash:cloud`) evaluates decisions, confirming or correcting verdicts across email and SMS datasets.
 
-### Results -- Email Dataset
+### Benchmark Results (Email & SMS Datasets)
 
-| Model | Accuracy | Precision | Recall | F1-Score | Avg. Time |
-|---|---|---|---|---|---|
-| **Gemini 2.5 Flash** | **89.90%** | **100.00%** | 72.97% | **84.38%** | 4.38s |
-| Ollama 8B | 74.13% | 56.74% | **86.71%** | 68.59% | 1.89s |
+| Primary Model | Judge Model | SMS Acc. | SMS F1-Score | Email Acc. | Email F1-Score | Email Pipeline Latency |
+|---|---|---|---|---|---|---|
+| **GLM 5.1** | `deepseek-v4-flash` | **97.47%** | **90.66%** | **93.00%** | **90.35%** | 10.46s |
+| **DeepSeek v4 Pro** | `deepseek-v4-flash` | 97.09% | 89.43% | 91.85% | 88.66% | 8.94s |
+| **Qwen 3.5 397B** | `deepseek-v4-flash` | 97.02% | 89.11% | 92.16% | 89.21% | 9.85s |
+| **MiniMax M2.7** | `deepseek-v4-flash` | 97.22% | 89.78% | 91.79% | 88.50% | 20.49s |
+| **GPT-OSS 120B** | `deepseek-v4-flash` | 97.00% | 88.98% | 90.27% | 86.05% | 10.91s |
+| **Ministral 3 14B** | `deepseek-v4-flash` | 97.06% | 89.15% | 90.84% | 87.02% | 25.18s |
+| **Llama 3 8B** | `deepseek-v4-flash` | 96.79% | 88.04% | 90.18% | 86.07% | 7.38s |
 
-### Results -- SMS Dataset
-
-| Model | Accuracy | Precision | Recall | F1-Score | Avg. Time |
-|---|---|---|---|---|---|
-| **Gemini 2.5 Flash** | **89.90%** | **70.59%** | 70.59% | **70.59%** | 2.30s |
-| Ollama 8B | 64.33% | 23.54% | **93.52%** | 37.62% | 1.28s |
-
-> Evaluation scripts available in `evaluate/`. Full reports in `metrics/`.
+> Detailed evaluation scripts and raw reports available in `metricas_judge/` and `evaluate/`.
 
 ---
 
 ## Local Installation
 
 ### Prerequisites
-
 - Python 3.11+
 - Git
-- API keys: Google Gemini, Google Safe Browsing, Gmail OAuth
+- API keys: Google Gemini, Google Safe Browsing, Gmail OAuth (optional)
 
 ### Step by Step
 
 **1. Clone the repository:**
 ```bash
-git clone https://github.com/PedroMikhael/message-spam-detector.git
-cd message-spam-detector
+git clone https://github.com/PedroMikhael/whatsapp-spam-detector.git
+cd whatsapp-spam-detector
 ```
 
-**2. Create and activate a virtual environment:**
+**2. Create and activate virtual environment:**
 ```bash
 # Windows
 py -m venv venv
@@ -252,122 +240,79 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**4. Configure environment variables:**
-
-Create a `.env` file in the project root:
+**4. Configure environment variables (`.env`):**
 ```env
 SECRET_KEY=your_django_secret_key
 GEMINI_API_KEY=your_gemini_key
 SAFE_BROWSING_API_KEY=your_safe_browsing_key
-OLLAMA_API_KEY=your_ollama_key          # optional
-OLLAMA_API_KEY2=your_second_key         # optional (load balancing)
+OLLAMA_API_KEY=your_ollama_key
+OLLAMA_MODEL=gpt-oss:120b-cloud
 ```
 
-**5. Set up Gmail credentials (OAuth 2.0):**
-- Create an **OAuth 2.0 Client ID** (Desktop App) in the [Google Cloud Console](https://console.cloud.google.com/)
-- Download `credentials.json` and place it in the project root
-- Run the authorization script:
+**5. Build vector database and run server:**
 ```bash
-python autorizar_gmail.py
-```
-
-**6. Build the vector database (RAG):**
-```bash
-python build_vector_db.py
-```
-> This processes the datasets in `database/` and creates the ChromaDB with embeddings.
-
-**7. Run migrations and start the server:**
-```bash
+python scripts/build_vector_db.py
 python manage.py migrate
-python manage.py createsuperuser  # create an admin user
 python manage.py runserver
-```
-
-**8. (Optional) Start the Email Bot:**
-
-In a separate terminal:
-```bash
-python email_bot.py
 ```
 
 ---
 
 ## Usage
 
-### Via Email
-1. Forward a suspicious email to `chatbot.larces@gmail.com`
-2. The bot automatically analyzes the content and links
-3. You receive a reply with:
-   - **SAFE** -- Message is safe
-   - **SUSPICIOUS** -- Message is suspicious, proceed with caution
-   - **MALICIOUS** -- Message is malicious, do not interact
-4. Click "Correct" or "Incorrect" to contribute to the training
+### 1. Via Chrome Extension
+- Open Chrome, click the **VerificAI** extension icon on any open email in Gmail or Outlook Web to analyze instantly.
 
-### Via API
-Send a `POST` request to `/api/analisar/` with the message text (see examples above).
+### 2. Via Email Bot
+- Forward suspicious emails to `verificai@uece.br` / `chatbot.larces@gmail.com` to receive an automated analysis reply.
 
-### Admin Panel
-Access `/admin/` to view feedback, performance metrics, and manage data.
+### 3. Via REST API
+- Send a `POST` request to `/api/analisar/` with `{ "texto": "...", "remetente": "..." }`.
 
 ---
 
 ## Project Structure
 
 ```
-verificai/
-|-- manage.py                  # Django entry point
-|-- email_bot.py               # Gmail monitoring bot
-|-- build_vector_db.py         # ChromaDB build script
-|-- autorizar_gmail.py         # OAuth authorization script
-|-- requirements.txt           # Python dependencies
-|-- Dockerfile                 # Production container
-|-- start.sh                   # Startup script (migrations + bot + gunicorn)
-|-- .env                       # Environment variables (not committed)
-|
-|-- spamapi/                   # Django configuration
-|   |-- settings.py            # Settings (DB, CORS, Jazzmin, APIs)
-|   |-- urls.py                # Main URL routes
-|   +-- wsgi.py                # WSGI application
-|
-|-- detector/                  # Main application
-|   |-- models.py              # Feedback model (analysis + feedback loop)
-|   |-- views.py               # REST views (analyze, feedback, train RAG)
-|   |-- services.py            # Core: AI (Ollama/Gemini), RAG, Safe Browsing
-|   |-- serializers.py         # DRF serializers
-|   |-- admin.py               # Custom admin with accuracy dashboard
-|   +-- tests.py               # Tests
-|
-|-- database/                  # Datasets for RAG
-|   |-- email_dataset.csv      # ~50MB of real emails (spam/ham)
-|   +-- sms_dataset.csv        # ~500KB of SMS messages (spam/ham)
-|
-|-- chroma_db/                 # ChromaDB vector store (generated)
-|
-|-- evaluate/                  # Model evaluation scripts
-|   |-- evaluate_api.py        # Evaluation via REST API
-|   |-- evaluate_ollama.py     # Local Ollama benchmark
-|   +-- evaluate_ollama_cloud.py # Ollama Cloud benchmark
-|
-|-- metrics/                   # Performance reports
-|   |-- relatorio_metrics_gemini2.5flash.txt
-|   |-- relatorio_metrics_ollama3b_v2.txt
-|   |-- relatorio_metrics_ollama8b_v2.txt
-|   +-- relatorio_metrics_ollama12b_v2.txt
-|
-+-- EXAMPLES.md                # Documented real test cases
+zap-spam-detector/
+├── manage.py                  # Django entry point
+├── email_bot.py               # Gmail monitoring bot
+├── Dockerfile                 # Production Docker container
+├── start.sh                   # Startup script
+├── requirements.txt           # Dependencies
+│
+├── chrome_extension/          # Manifest V3 Google Chrome Extension
+│   ├── manifest.json          # Extension configuration & permissions
+│   ├── content_script.js      # Gmail & Outlook DOM parser (text + base64 images)
+│   ├── popup.html             # Extension UI (Traffic light + Forwarding tutorial)
+│   ├── popup.css              # Traffic light styling (#28a745, #ffc107, #dc3545)
+│   ├── popup.js               # API caller & UI renderer
+│   ├── background.js          # Service worker
+│   └── icons/                 # Extension icons (16x16, 48x48, 128x128)
+│
+├── spamapi/                   # Django settings & URLs
+│   ├── settings.py            # Configuration (DB, CORS, Jazzmin)
+│   └── urls.py                # Main URL router
+│
+├── detector/                  # Core application
+│   ├── models.py              # Feedback model & hash generation
+│   ├── views.py               # API endpoints (analisar, feedback, train)
+│   ├── services.py            # AI Engine (Ollama/Gemini), Safe Browsing & RAG
+│   ├── serializers.py         # DRF serializers (includes base64 images support)
+│   └── sanitizer.py           # PII Regex sanitizer (CPF, CNPJ, phone, cards)
+│
+├── database/                  # Datasets
+│   ├── email_dataset.csv      # Email dataset for RAG
+│   └── sms_dataset.csv        # SMS dataset for RAG
+│
+├── metricas_judge/            # LLM-as-a-Judge reports & metric CSVs
+│   ├── resumo_metricas_modelos.csv
+│   └── relatorio_metrics_*.txt
+│
+└── evaluate/                  # Evaluation & benchmark scripts
+    ├── evaluate_ollama_cloud.py
+    └── generate_csv.py
 ```
-
----
-
-## Security
-
-- All API keys are managed via **environment variables** (never hardcoded)
-- **HTTPS** enabled by default on Hugging Face Spaces
-- **CSRF protection** and **CORS** properly configured
-- SSL proxy headers configured for reverse proxy
-- Container runs as a **non-root user**
-- **OAuth 2.0** for Gmail authentication (no passwords stored)
 
 ---
 
@@ -379,13 +324,12 @@ verificai/
 | **Joao Victor** | Developer |
 | **Valderlan Nobre** | Scrum Master |
 
-
 ---
 
 <div align="center">
 
-**LARCES** -- Computer Networks and Security Laboratory
-**UECE** -- State University of Ceara
+**LARCES** -- Computer Networks and Security Laboratory  
+**UECE** -- State University of Ceara  
 
 *Advisor: Prof. Rafael Lopes Gomes*
 

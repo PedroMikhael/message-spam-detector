@@ -9,7 +9,6 @@
 
 // ─── Configurações ──────────────────────────────────────────────────
 const API_URL = "https://pedromikhael-verificai.hf.space/api/analisar/";
-const FEEDBACK_BASE_URL = "https://pedromikhael-verificai.hf.space";
 
 const SEMAFORO_MAP = {
   SAFE: {
@@ -85,15 +84,6 @@ function exibirVeredito(resultado) {
 
   document.getElementById("resultado-precaucao").textContent =
     resultado.precaucao || "";
-
-  // Botões de feedback
-  const feedbackId = resultado.feedback_id;
-  if (feedbackId) {
-    document.getElementById("btn-correto").href =
-      `${FEEDBACK_BASE_URL}/feedback/${feedbackId}/correto/`;
-    document.getElementById("btn-incorreto").href =
-      `${FEEDBACK_BASE_URL}/feedback/${feedbackId}/incorreto/`;
-  }
 
   mostrarTela(telaResultado);
 }

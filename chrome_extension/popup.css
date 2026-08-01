@@ -188,55 +188,6 @@ body {
   font-weight: 700;
 }
 
-/* ─── Feedback ───────────────────────────────────────────────────── */
-
-.feedback-section {
-  text-align: center;
-  padding: 16px 24px;
-  border-top: 1px solid #eee;
-}
-
-.feedback-pergunta {
-  font-size: 13px;
-  color: #777;
-  margin-bottom: 12px;
-}
-
-.feedback-botoes {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-
-.btn-feedback {
-  display: inline-block;
-  padding: 10px 18px;
-  color: white;
-  text-decoration: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 13px;
-  transition: opacity 0.2s ease, transform 0.1s ease;
-  cursor: pointer;
-}
-
-.btn-feedback:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.btn-feedback:active {
-  transform: translateY(0);
-}
-
-.btn-correto {
-  background-color: #28a745;
-}
-
-.btn-incorreto {
-  background-color: #dc3545;
-}
-
 /* ─── Rodapé ─────────────────────────────────────────────────────── */
 
 .resultado-footer {

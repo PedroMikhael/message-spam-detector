@@ -18,7 +18,7 @@ from PIL import Image
 # Ollama Cloud clients (load balancing)
 OLLAMA_API_KEY = config("OLLAMA_API_KEY", default="")
 OLLAMA_API_KEY2 = config("OLLAMA_API_KEY2", default="")
-MODELO_OLLAMA = config("OLLAMA_MODEL", default="qwen3-vl:235b-cloud")
+MODELO_OLLAMA = config("OLLAMA_MODEL", default="gpt-oss:120b-cloud")
 
 ollama_clients = []
 

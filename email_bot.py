@@ -20,7 +20,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'spamapi.settings') 
 django.setup()
-from detector.services import analisar_com_IA
+from detector.services import analisar_com_IA, adicionar_ao_chromadb
 from detector.models import Feedback
 from detector.sanitizer import sanitizar_texto
 
@@ -289,7 +289,7 @@ def check_and_process_emails(service, account_name="Bot"):
                     analise_ia="Mensagem vazia — nenhuma análise necessária."
                 )
                 
-                send_reply_vazio(service, sender, subject, nova_analise.id)
+                send_reply_vazio(service, sender, subject)
                 service.users().messages().modify(userId="me", id=message_info["id"], body={'removeLabelIds': ['UNREAD']}).execute()
                 print(f"    [{account_name}] Resposta (vazia) enviada e e-mail marcado como lido!")
                 print(f"{'='*60}\n")
@@ -314,10 +314,15 @@ def check_and_process_emails(service, account_name="Bot"):
                 risco_ia=risk_level,
                 analise_ia=str(resultado_analise)
             )
-            
-            print(f"    Salvo no banco (Feedback ID: {nova_analise.id})")
 
-            send_reply(service, sender, subject, motivo, precaucao, nova_analise.id, risk_level)
+            # Retroalimentação automática: classificação da IA vai direto pro banco vetorial
+            adicionar_ao_chromadb(texto=conteudo_limpo, rotulo=risk_level)
+            nova_analise.treinamento_concluido = True
+            nova_analise.save(update_fields=['treinamento_concluido'])
+
+            print(f"    Salvo no banco e ChromaDB atualizado (ID: {nova_analise.id})")
+
+            send_reply(service, sender, subject, motivo, precaucao, risk_level)
 
             service.users().messages().modify(userId="me", id=message_info["id"], body={'removeLabelIds': ['UNREAD']}).execute()
             print(f"    [{account_name}] Resposta enviada e e-mail marcado como lido!")
@@ -338,13 +343,8 @@ def _formatar_resposta_html(message_text):
     return texto_html
 
 
-def send_reply(service, to, subject, motivo, precaucao, feedback_id, risk_level="INDETERMINADO"):
+def send_reply(service, to, subject, motivo, precaucao, risk_level="INDETERMINADO"):
     """Cria e envia um e-mail de resposta em HTML com semáforo, tabela e logo LARCES."""
-    
-    base_url = os.environ.get("FEEDBACK_BASE_URL", "https://pedromikhael-verificai.hf.space")
-    link_correto = f"{base_url}/feedback/{feedback_id}/correto/"
-    link_incorreto = f"{base_url}/feedback/{feedback_id}/incorreto/"
-
     
     semaforo_map = {
         "SAFE": {"img": "semaforoVerde.png", "cor": "#28a745", "label": "Segura"},
@@ -391,13 +391,6 @@ def send_reply(service, to, subject, motivo, precaucao, feedback_id, risk_level=
                         padding-top: 2px !important;
                         padding-bottom: 14px !important;
                     }}
-                    .btn-feedback {{
-                        display: block !important;
-                        width: 100% !important;
-                        margin-right: 0 !important;
-                        margin-bottom: 10px !important;
-                        text-align: center !important;
-                        box-sizing: border-box !important;
                     }}
                 }}
             </style>
@@ -424,10 +417,6 @@ def send_reply(service, to, subject, motivo, precaucao, feedback_id, risk_level=
                         </tr>
                     </table>
                 </div>
-                <div style="text-align: center; padding: 16px 24px; border-top: 1px solid #eee;">
-                    <p style="font-size: 14px; color: #777; margin-bottom: 12px;"><em>Minha análise foi útil?</em></p>
-                    <a class="btn-feedback" href="{link_correto}" style="display: inline-block; padding: 12px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 8px; margin-right: 8px; font-weight: 600; font-size: 14px; min-height: 44px; line-height: 20px;">Sim, acertou</a>
-                    <a class="btn-feedback" href="{link_incorreto}" style="display: inline-block; padding: 12px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; min-height: 44px; line-height: 20px;">Não, errou</a>
                 </div>
                 <div style="text-align: center; padding: 16px; border-top: 1px solid #f0f0f0;">
                     <img src="{larces_logo}" alt="LARCES - UECE" style="width: 100px; height: auto; opacity: 0.8;">
@@ -452,7 +441,7 @@ def send_reply(service, to, subject, motivo, precaucao, feedback_id, risk_level=
     service.users().messages().send(userId="me", body=create_message).execute()
 
 
-def send_reply_vazio(service, to, subject, feedback_id):
+def send_reply_vazio(service, to, subject):
     """Envia resposta para emails com conteúdo vazio — sem chamar IA."""
     
     larces_logo = "https://huggingface.co/spaces/PedroMikhael/VerificAI/resolve/main/media/larcesLogo.png"
