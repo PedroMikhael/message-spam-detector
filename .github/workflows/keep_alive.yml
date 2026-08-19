@@ -1,0 +1,77 @@
+name: ☁️ Keep-Alive — HuggingFace & Supabase
+
+on:
+  schedule:
+    # Dispara a cada 10 minutos, 24/7
+    # Abaixo do timeout de sleep do HF Space (15 min) e da pausa semanal do Supabase
+    - cron: '*/30 * * * *'
+
+  # Permite disparar manualmente pela aba Actions do GitHub (útil para testar)
+  workflow_dispatch:
+
+jobs:
+  # ─────────────────────────────────────────────────────────
+  # JOB 1 — Mantém o Hugging Face Space (VerificAI) 
+  # ─────────────────────────────────────────────────────────
+  keep_alive_huggingface:
+    name: 🤗 Ping HuggingFace Space
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Ping /health/ endpoint
+        run: |
+          echo "🔔 Pingando Hugging Face Space..."
+
+          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" \
+            --max-time 60 \
+            --retry 3 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            "https://pedromikhael-verificai.hf.space/health/")
+
+          echo "📡 HTTP Status recebido: $HTTP_STATUS"
+
+          if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 400 ]]; then
+            echo "✅ HuggingFace Space está ativo e respondendo."
+          else
+            echo "❌ Resposta inesperada do HuggingFace Space: $HTTP_STATUS"
+            exit 1
+          fi
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 2 — Mantém o banco de dados Supabase ativo
+  # ─────────────────────────────────────────────────────────
+  keep_alive_supabase:
+    name: 🐘 Ping Supabase DB
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Query Supabase REST API
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "🔔 Pingando Supabase..."
+
+          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" \
+            --max-time 30 \
+            --retry 2 \
+            --retry-delay 5 \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Accept: application/json" \
+            "$SUPABASE_URL/rest/v1/detector_feedback?select=id&limit=1")
+
+          echo "📡 HTTP Status recebido: $HTTP_STATUS"
+
+          if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 400 ]]; then
+            echo "✅ Supabase está ativo e respondendo."
+          elif [[ "$HTTP_STATUS" == "406" ]]; then
+            # 406 Not Acceptable ainda indica que o DB está vivo
+            echo "✅ Supabase respondeu (406 — DB ativo, verificar Accept headers)."
+          else
+            echo "❌ Supabase retornou status inesperado: $HTTP_STATUS"
+            exit 1
+          fi
